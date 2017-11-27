@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.shortcuts import render
-from django.core.mail import send_mail
+import json
+
 from django.http.response import JsonResponse
+from django.template import Template, Context
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
+
+from tmail.models import EmailTemplate
 
 # Create your views here.
 
@@ -24,8 +27,14 @@ def trigger_email(request):
         to_email = get_value_from_dict('to_email', data)
         to_email = to_email.split(',')
         from_email = get_value_from_dict('from_email', data)
-        subject = get_value_from_dict('subject', data)
-        body = get_value_from_dict('body', data)
+        subject = data.get('subject')
+        template_id = data.get('template_id')
+        body = data.get('body')
+        context = json.loads(data.get('context', "{}"))
+        if template_id:
+            template = EmailTemplate.objects.get(id=template_id)
+            subject = template.subject
+            body = template.body
     except Exception, e:
         return JsonResponse({'status': '0', 'error': str(e)})
     try:
@@ -34,7 +43,9 @@ def trigger_email(request):
         msg.encoding = "utf-8"
         msg.content_subtype = "html"
         try:
-            html_content = render_to_string(body, context)
+            t = Template(body)
+            c = Context(context)
+            html_content = t.render(c)
             msg.attach_alternative(html_content, "text/html")
         except Exception, e:
             print str(e)
