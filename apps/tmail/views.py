@@ -35,6 +35,10 @@ def trigger_email(request):
             template = EmailTemplate.objects.get(id=template_id)
             subject = template.subject
             body = template.body
+
+        t = Template(subject)
+        c = Context(context)
+        subject = t.render(c)
     except Exception, e:
         return JsonResponse({'status': '0', 'error': str(e)})
     try:
